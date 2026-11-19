@@ -39,7 +39,7 @@ enum YtDlp {
     }
 
     static func fetchInfo(url: String) async throws -> VideoInfo {
-        guard let exe = ytdlpPath else { throw FetchError(message: "yt-dlp not found. Install it with: brew install yt-dlp ffmpeg") }
+        guard let exe = ytdlpPath else { throw FetchError(message: "yt-dlp not found. Install it with: brew install yt-dlp ffmpeg deno") }
         let args = ["-J", "--flat-playlist", "--no-playlist", "--no-warnings", "--no-update", "--", url]
         let (status, out, err) = try await run(exe, args)
         guard status == 0 else {

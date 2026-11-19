@@ -21,15 +21,9 @@ Built by [JFlowerMedia](https://jflowermedia.com/) · [Download](../../releases)
 
 ## Install
 
-Fetcher drives yt-dlp and ffmpeg, so install those first with [Homebrew](https://brew.sh):
+Download the latest `Fetcher-<version>.zip` from [Releases](../../releases), unzip, and drag **Fetcher.app** to Applications.
 
-```
-brew install yt-dlp ffmpeg deno
-```
-
-(deno is what yt-dlp uses to get past YouTube's JavaScript checks.)
-
-Then download the latest `Fetcher-<version>.zip` from [Releases](../../releases), unzip, and drag **Fetcher.app** to Applications.
+Fetcher drives yt-dlp, ffmpeg and deno (deno is what yt-dlp uses to get past YouTube's JavaScript checks). On first launch it installs whichever are missing with [Homebrew](https://brew.sh). If you don't have Homebrew, click **Install** in the banner: Terminal opens, installs Homebrew (it asks for your Mac password), then the three tools.
 
 Fetcher isn't notarized by Apple, so macOS blocks the first launch:
 
@@ -61,7 +55,7 @@ See [DEVELOPING.md](DEVELOPING.md) for more.
 
 - **Downloads suddenly failing?** Update yt-dlp: **Fetcher → Update yt-dlp**. Site changes break old versions.
 - **A download failed?** Click the log button on its row. It shows the exact yt-dlp command, so you can run it in Terminal yourself.
-- **"yt-dlp wasn't found"** — Fetcher looks in `/opt/homebrew/bin`, `/usr/local/bin` and `~/.local/bin`.
+- **Fetcher can't find yt-dlp, ffmpeg or deno?** It looks in `/opt/homebrew/bin`, `/usr/local/bin` and `~/.local/bin`.
 - **4K MP4 won't play in QuickTime or QuickLook?** YouTube only offers H.264 up to 1080p; higher resolutions are VP9 or AV1, which QuickTime can't decode. Leave **Convert to HEVC when needed** on (it is by default) and Fetcher re-encodes them after downloading. A 4K minute takes roughly 20 seconds on an M1 Max.
 
 ## Known gaps

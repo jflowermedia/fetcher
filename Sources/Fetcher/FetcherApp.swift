@@ -54,6 +54,7 @@ struct FetcherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var manager = DownloadManager()
     @State private var updater = Updater()
+    @State private var dependencies = Dependencies()
     @AppStorage("watchClipboard") private var watchClipboard = true
 
     init() {
@@ -65,6 +66,7 @@ struct FetcherApp: App {
             ContentView()
                 .environment(manager)
                 .environment(updater)
+                .environment(dependencies)
                 .frame(minWidth: 780, minHeight: 640)
                 .onAppear { appDelegate.manager = manager }
         }

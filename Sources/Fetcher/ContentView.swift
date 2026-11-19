@@ -4,6 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(DownloadManager.self) private var manager
     @Environment(Updater.self) private var updater
+    @Environment(Dependencies.self) private var dependencies
 
     @State private var urlText = ""
     @State private var info: VideoInfo?
@@ -37,13 +38,10 @@ struct ContentView: View {
     @State private var lastPasteboardChange = -1
     @State private var isDropTargeted = false
 
-    private let ytdlpMissing = YtDlp.ytdlpPath == nil
-    private let ffmpegMissing = YtDlp.ffmpegPath == nil
-
     var body: some View {
         VSplitView {
             VStack(alignment: .leading, spacing: 14) {
-                if ytdlpMissing || ffmpegMissing { missingBanner }
+                dependenciesBanner
                 updateBanner
                 urlBar
                 infoCard
@@ -89,25 +87,48 @@ struct ContentView: View {
         .onAppear(perform: checkPasteboard)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             checkPasteboard()
+            if !dependencies.isInstalling { dependencies.refresh() }
         }
-        .task { await updater.checkVersion() }
+        .task {
+            // First launch: install anything missing straight away when Homebrew can do it unattended.
+            if dependencies.hasHomebrew { await dependencies.install() }
+            await updater.checkVersion()
+        }
+        .onChange(of: dependencies.missing.contains("yt-dlp")) { _, _ in
+            Task { await updater.checkVersion() }
+        }
     }
 
     // MARK: Sections
 
-    private var missingBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(ytdlpMissing ? "yt-dlp wasn't found." : "ffmpeg wasn't found — merging, MP4 and audio conversion won't work.")
-                    .fontWeight(.medium)
-                Text("Install with Homebrew:  brew install yt-dlp ffmpeg").font(.callout).foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+    @ViewBuilder
+    private var dependenciesBanner: some View {
+        if dependencies.isInstalling || dependencies.error != nil || !dependencies.missing.isEmpty {
+            HStack(spacing: 10) {
+                if dependencies.isInstalling {
+                    ProgressView().controlSize(.small)
+                    Text("Installing \(dependencies.missing.joined(separator: ", ")) with Homebrew… this can take a few minutes.")
+                } else {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(dependencies.error ?? "Fetcher needs \(dependencies.missing.joined(separator: ", ")) to download.")
+                            .fontWeight(.medium)
+                            .textSelection(.enabled)
+                        if !dependencies.hasHomebrew {
+                            Text("Install opens Terminal to set up Homebrew first. It asks for your Mac password.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(dependencies.error == nil ? "Install" : "Try Again") {
+                        Task { await dependencies.install() }
+                    }
+                }
             }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.yellow.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.yellow.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
     }
 
     @ViewBuilder
@@ -438,7 +459,7 @@ struct ContentView: View {
     }
 
     private var canDownload: Bool {
-        guard !ytdlpMissing else { return false }
+        guard !dependencies.missing.contains("yt-dlp") else { return false }
         if !batchURLs.isEmpty { return true }
         guard info != nil, clipError == nil else { return false }
         if mode == .formats { return selectedFormat != nil }

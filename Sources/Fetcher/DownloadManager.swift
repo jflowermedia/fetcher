@@ -152,7 +152,7 @@ final class DownloadManager {
 
     private func start(_ job: DownloadJob) {
         guard let exe = YtDlp.ytdlpPath else {
-            job.state = .failed("yt-dlp not found — brew install yt-dlp ffmpeg")
+            job.state = .failed("yt-dlp not found — brew install yt-dlp ffmpeg deno")
             return
         }
         try? FileManager.default.createDirectory(at: job.request.outputDir, withIntermediateDirectories: true)
@@ -378,7 +378,8 @@ final class DownloadManager {
 
     private func notify(title: String, body: String) {
         guard Bundle.main.bundleIdentifier != nil else { return }
-        if !NSApp.isActive { NSApp.requestUserAttention(.informationalRequest) }
+        // NSApp is nil under --self-check, which runs before the app starts.
+        if let app = NSApp, !app.isActive { app.requestUserAttention(.informationalRequest) }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body

@@ -44,8 +44,8 @@ enum SelfCheck {
         check(!ContentView.isOnlyLinks("watch this https://youtu.be/a"), "clipboard: a sentence with a link doesn't")
 
         guard !CommandLine.arguments.contains("--offline") else { return }
-        guard YtDlp.ytdlpPath != nil, YtDlp.ffmpegPath != nil else {
-            check(false, "yt-dlp and ffmpeg installed")
+        guard Dependencies.findMissing().isEmpty else {
+            check(false, "yt-dlp, ffmpeg and deno installed", Dependencies.findMissing().joined(separator: ", "))
             return
         }
 
