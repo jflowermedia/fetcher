@@ -7,9 +7,9 @@ import UserNotifications
 @Observable
 final class DownloadJob: Identifiable {
     enum State: Equatable {
-        case queued, downloading, processing, finished, failed(String), cancelled
+        case queued, downloading, processing, converting, finished, failed(String), cancelled
 
-        var isActive: Bool { self == .downloading || self == .processing }
+        var isActive: Bool { self == .downloading || self == .processing || self == .converting }
         var isDone: Bool {
             switch self {
             case .finished, .failed, .cancelled: return true
@@ -58,6 +58,9 @@ final class DownloadJob: Identifiable {
             if let e = eta, e > 0 { parts.append("\(Fmt.duration(e)) left") }
             return parts.isEmpty ? "Starting…" : parts.joined(separator: " · ")
         case .processing: return "Processing…"
+        case .converting:
+            let pct = progress.map { String(format: " %.0f%%", $0 * 100) } ?? ""
+            return "Converting to HEVC for QuickTime…" + pct
         case .finished: return files.count > 1 ? "Done · \(files.count) files" : "Done"
         case .failed(let msg): return msg
         case .cancelled: return "Cancelled"
@@ -105,7 +108,7 @@ final class DownloadManager {
         switch job.state {
         case .queued:
             job.state = .cancelled
-        case .downloading, .processing:
+        case .downloading, .processing, .converting:
             job.cancelRequested = true
             if let p = job.process { Self.terminateTree(p) }
         default:
@@ -186,10 +189,12 @@ final class DownloadManager {
         job.process = nil
         if job.cancelRequested {
             job.state = .cancelled
+        } else if status == 0 && job.request.convertForQuickTime {
+            // Still counts against maxConcurrent while converting, so don't pump yet.
+            Task { await convertForQuickTime(job) }
+            return
         } else if status == 0 {
-            job.state = .finished
-            job.progress = 1
-            notify(title: "Download finished", body: job.title)
+            complete(job)
         } else {
             let err = job.log.last { $0.hasPrefix("ERROR:") }
                 .map { String($0.dropFirst("ERROR:".count)).trimmingCharacters(in: .whitespaces) }
@@ -197,6 +202,102 @@ final class DownloadManager {
             notify(title: "Download failed", body: job.title)
         }
         pump()
+    }
+
+    private func complete(_ job: DownloadJob) {
+        job.state = .finished
+        job.progress = 1
+        notify(title: "Download finished", body: job.title)
+    }
+
+    // MARK: QuickTime conversion
+
+    private func convertForQuickTime(_ job: DownloadJob) async {
+        for (i, file) in job.files.enumerated() {
+            guard !job.cancelRequested else { break }
+            guard let probe = await QuickTimeConverter.probe(file),
+                  QuickTimeConverter.needsConversion(file, probe) else { continue }
+            job.state = .converting
+            job.progress = 0
+            job.log.append("Converting \(probe.videoCodec) to HEVC: \(file.lastPathComponent)")
+            let temp = QuickTimeConverter.tempURL(for: file)
+            let ok = await runFFmpeg(job, QuickTimeConverter.arguments(input: file, output: temp, probe: probe),
+                                     duration: probe.duration)
+            if ok, !job.cancelRequested {
+                do {
+                    _ = try FileManager.default.replaceItemAt(file, withItemAt: temp)
+                    job.files[i] = file
+                } catch {
+                    try? FileManager.default.removeItem(at: temp)
+                    job.state = .failed("Downloaded, but couldn't replace it with the HEVC copy: \(error.localizedDescription)")
+                    break
+                }
+            } else {
+                try? FileManager.default.removeItem(at: temp)
+                if !job.cancelRequested {
+                    let err = job.log.last.map { ": \($0)" } ?? ""
+                    job.state = .failed("Downloaded, but the HEVC conversion failed\(err). The original file was kept.")
+                }
+                break
+            }
+        }
+        job.process = nil
+        if job.cancelRequested {
+            job.state = .cancelled
+        } else if job.state == .converting || job.state == .processing || job.state == .downloading {
+            complete(job)
+        } else {
+            notify(title: "Conversion failed", body: job.title)
+        }
+        pump()
+    }
+
+    /// Runs ffmpeg with `-progress pipe:1`, updating the job's progress. True on success.
+    private func runFFmpeg(_ job: DownloadJob, _ args: [String], duration: Double) async -> Bool {
+        guard let exe = YtDlp.ffmpegPath else {
+            job.log.append("ffmpeg not found")
+            return false
+        }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: exe)
+        p.arguments = args
+        p.environment = YtDlp.environment
+        p.standardInput = FileHandle.nullDevice
+        let out = Pipe(), err = Pipe()
+        p.standardOutput = out
+        p.standardError = err
+
+        let buffer = LineBuffer()
+        out.fileHandleForReading.readabilityHandler = { [weak job] handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil; return }
+            let lines = buffer.append(data)
+            guard let micros = lines.last(where: { $0.hasPrefix("out_time_us=") })
+                .flatMap({ Double($0.dropFirst("out_time_us=".count)) }), duration > 0 else { return }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { job?.progress = min(max(micros / 1_000_000 / duration, 0), 1) }
+            }
+        }
+
+        return await withCheckedContinuation { cont in
+            p.terminationHandler = { proc in
+                let errText = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                DispatchQueue.main.async {
+                    out.fileHandleForReading.readabilityHandler = nil
+                    MainActor.assumeIsolated {
+                        for line in errText.split(separator: "\n") { job.log.append(String(line)) }
+                    }
+                    cont.resume(returning: proc.terminationStatus == 0)
+                }
+            }
+            do {
+                try p.run()
+                job.process = p
+            } catch {
+                job.log.append("Couldn't start ffmpeg: \(error.localizedDescription)")
+                cont.resume(returning: false)
+            }
+        }
     }
 
     private static func handle(_ line: String, job: DownloadJob) {

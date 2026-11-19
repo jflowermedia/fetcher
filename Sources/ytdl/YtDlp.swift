@@ -202,7 +202,7 @@ enum YtDlp {
         let id = format.formatID
         if format.kind == .videoOnly {
             // MP4 players (QuickTime) want AAC, so prefer an m4a audio track when the output is MP4.
-            let wantsAAC = videoOutput == .mp4Remux
+            let wantsAAC = videoOutput == .mp4Remux || videoOutput == .mp4Recode
             a += ["-f", wantsAAC ? "\(id)+ba[ext=m4a]/\(id)+ba/\(id)" : "\(id)+ba/\(id)"]
         } else {
             a += ["-f", id]
@@ -215,7 +215,8 @@ enum YtDlp {
         case .mkvRemux:
             a += ["--merge-output-format", "mkv", "--remux-video", "mkv"] + videoExtras(o, thumbnailOK: true)
         case .mp4Recode:
-            a += ["--merge-output-format", "mkv", "--recode-video", "mp4"] + videoExtras(o, thumbnailOK: true)
+            // Remuxed to MP4 here; QuickTimeConverter re-encodes to HEVC afterwards if it needs it.
+            a += ["--merge-output-format", "mp4", "--remux-video", "mp4"] + videoExtras(o, thumbnailOK: true)
         }
         return a
     }

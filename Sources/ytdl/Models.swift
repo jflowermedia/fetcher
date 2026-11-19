@@ -153,7 +153,7 @@ enum VideoOutput: String, CaseIterable, Identifiable {
     case original = "Original"
     case mp4Remux = "MP4 (remux)"
     case mkvRemux = "MKV (remux)"
-    case mp4Recode = "MP4 (re-encode)"
+    case mp4Recode = "MP4 (QuickTime-ready)"
     var id: String { rawValue }
 }
 
@@ -174,6 +174,8 @@ struct DownloadRequest {
     var modeLabel: String
     var arguments: [String]
     var outputDir: URL
+    /// Re-encode VP9/AV1 results to HEVC afterwards so QuickTime and QuickLook can play them.
+    var convertForQuickTime = false
 }
 
 // MARK: - Formatting helpers

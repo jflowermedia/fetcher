@@ -8,7 +8,7 @@ Built by [JFlowerMedia](https://jflowermedia.com/) · [Download](../../releases)
 
 ## Features
 
-- **Video (MP4)** — pick a quality from Best down to 360p. H.264 and AAC are preferred, so files play everywhere, QuickTime included.
+- **Video (MP4)** — pick a quality from Best down to 360p. H.264 and AAC are preferred, so files play everywhere. Above 1080p, where YouTube only offers VP9 or AV1, ytdl re-encodes to HEVC with the Mac's hardware encoder so QuickTime and QuickLook can play it.
 - **Audio** — MP3 at the bitrate you choose, M4A, Opus, FLAC, WAV or the original stream, with cover art and metadata.
 - **All Formats** — a sortable table of every stream on offer. Pick a video-only stream and the best audio is merged in. Keep the original, remux to MP4 or MKV, or re-encode to MP4.
 - **Clips** — download just 1:20 to 2:45 instead of the whole video. **Precise cuts** re-encodes at the cut points so the clip starts exactly where you asked.
@@ -60,7 +60,7 @@ See [DEVELOPING.md](DEVELOPING.md) for more.
 - **Downloads suddenly failing?** Update yt-dlp: **ytdl → Update yt-dlp**. Site changes break old versions.
 - **A download failed?** Click the log button on its row. It shows the exact yt-dlp command, so you can run it in Terminal yourself.
 - **"yt-dlp wasn't found"** — ytdl looks in `/opt/homebrew/bin`, `/usr/local/bin` and `~/.local/bin`.
-- **MP4 won't play in QuickTime above 1080p** — YouTube only offers H.264 up to 1080p. Higher resolutions are VP9 or AV1, which QuickTime can't play. Use IINA or VLC, or choose 1080p.
+- **4K MP4 won't play in QuickTime or QuickLook?** YouTube only offers H.264 up to 1080p; higher resolutions are VP9 or AV1, which QuickTime can't decode. Leave **Convert to HEVC when needed** on (it is by default) and ytdl re-encodes them after downloading. A 4K minute takes roughly 20 seconds on an M1 Max.
 
 ## Known gaps
 

@@ -28,6 +28,7 @@ struct ContentView: View {
     @AppStorage("embedChapters") private var embedChapters = true
     @AppStorage("watchClipboard") private var watchClipboard = true
     @AppStorage("preciseCuts") private var preciseCuts = true
+    @AppStorage("convertForQuickTime") private var convertForQuickTime = true
     @State private var wholePlaylist = false
     @State private var selectedFormatID: String?
     @State private var clipEnabled = false
@@ -255,9 +256,13 @@ struct ContentView: View {
                     ForEach(heightChoices, id: \.self) { h in Text(heightLabel(h)).tag(h) }
                 }
                 Toggle("Prefer H.264 (plays everywhere, incl. QuickTime)", isOn: $preferH264)
-                if preferH264 && (videoHeight == 0 || videoHeight > 1080) && (maxHeight > 1080 || !batchURLs.isEmpty) {
-                    Text("YouTube only offers H.264 up to 1080p; higher resolutions will be VP9/AV1 in the MP4.")
+                Toggle("Convert to HEVC when needed, so it plays in QuickTime and QuickLook", isOn: $convertForQuickTime)
+                if (videoHeight == 0 || videoHeight > 1080) && (maxHeight > 1080 || !batchURLs.isEmpty) {
+                    Text(convertForQuickTime
+                         ? "Above 1080p YouTube only offers VP9 or AV1. ytdl re-encodes those to HEVC after downloading: hardware-accelerated, but it takes a moment and the file is a little larger."
+                         : "Above 1080p YouTube only offers VP9 or AV1, which QuickTime and QuickLook can't play. Use IINA or VLC, or turn on HEVC conversion.")
                         .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .formStyle(.columns)
@@ -559,6 +564,12 @@ struct ContentView: View {
         )
         guard let built = arguments(opts) else { return }
         let (args, label) = built
+        let convert: Bool
+        switch mode {
+        case .video: convert = convertForQuickTime
+        case .audio: convert = false
+        case .formats: convert = selectedFormat?.kind != .audioOnly && videoOutput == .mp4Recode
+        }
         var suffix = opts.wholePlaylist ? " · playlist" : ""
         if let clip = opts.clip { suffix += " · clip \(Fmt.duration(clip.start).isEmpty ? "0:00" : Fmt.duration(clip.start))–\(Fmt.duration(clip.end))" }
 
@@ -566,7 +577,8 @@ struct ContentView: View {
             // Titles and thumbnails arrive from yt-dlp once each job starts. Queued in order: first link starts first.
             for url in batchURLs {
                 manager.enqueue(DownloadRequest(url: url, title: "", thumbnail: nil, modeLabel: label + suffix,
-                                                arguments: args, outputDir: opts.outputDir))
+                                                arguments: args, outputDir: opts.outputDir,
+                                                convertForQuickTime: convert))
             }
             urlText = ""
             return
@@ -580,7 +592,8 @@ struct ContentView: View {
             thumbnail: thumbnailURL(info),
             modeLabel: label + suffix,
             arguments: args,
-            outputDir: opts.outputDir
+            outputDir: opts.outputDir,
+            convertForQuickTime: convert
         ))
     }
 }

@@ -107,7 +107,7 @@ struct JobRow: View {
     @ViewBuilder
     private var progressLine: some View {
         switch job.state {
-        case .downloading, .processing:
+        case .downloading, .processing, .converting:
             VStack(alignment: .leading, spacing: 2) {
                 if job.state == .processing || job.progress == nil {
                     ProgressView().progressViewStyle(.linear)
@@ -131,7 +131,7 @@ struct JobRow: View {
     private var buttons: some View {
         HStack(spacing: 4) {
             switch job.state {
-            case .queued, .downloading, .processing:
+            case .queued, .downloading, .processing, .converting:
                 iconButton("xmark.circle.fill", help: "Cancel") { manager.cancel(job) }
             case .finished:
                 iconButton("magnifyingglass.circle.fill", help: "Show in Finder") { revealInFinder() }
