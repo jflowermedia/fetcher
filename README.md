@@ -6,6 +6,8 @@ Built by [JFlowerMedia](https://jflowermedia.com/) · [Download](../../releases)
 
 > **Alpha, version 0.1.1.** Tested on one Mac with YouTube. Bug reports welcome in [Issues](../../issues).
 
+![The Fetcher window: a hockey recap's link pasted at the top with its thumbnail, title and length, the Video (MP4) tab set to 4K with H.264 and HEVC conversion ticked, and below it the downloads list with three finished 4K recaps and one converting for QuickTime at 74%](docs/fetcher.png)
+
 ## Features
 
 - **Video (MP4)** — pick a quality from Best down to 360p. H.264 and AAC are preferred, so files play everywhere. Above 1080p, where YouTube only offers VP9 or AV1, Fetcher re-encodes to HEVC with the Mac's hardware encoder so QuickTime and QuickLook can play it.
