@@ -3,7 +3,10 @@
 #
 #   ./build.sh           build build/ytdl.app
 #   ./build.sh --open    build it and launch it
+#   ./build.sh --install build it, copy it into /Applications and launch it from there
 #   ./build.sh --zip     build it and package build/ytdl-<version>.zip for a GitHub release
+#
+# Options combine, e.g. ./build.sh --install --zip
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -55,12 +58,23 @@ PLIST
 codesign --force --sign - "$APP"
 echo "Built $APP"
 
-case "${1:-}" in
-  --open) open "$APP" ;;
-  --zip)
-    ZIP="build/ytdl-$VERSION.zip"
-    rm -f "$ZIP"
-    ditto -c -k --keepParent "$APP" "$ZIP"   # ditto, not zip: preserves the bundle
-    echo "Packaged $ZIP" ;;
-esac
+for arg in "$@"; do
+  case "$arg" in
+    --open) open "$APP" ;;
+    --install)
+      # Quit a running copy first; replacing an app out from under itself can crash it.
+      osascript -e 'quit app "ytdl"' 2>/dev/null || true
+      while pgrep -xq ytdl; do sleep 0.2; done
+      rm -rf /Applications/ytdl.app
+      ditto "$APP" /Applications/ytdl.app
+      touch /Applications/ytdl.app          # nudges Finder to pick up a changed icon
+      echo "Installed to /Applications/ytdl.app"
+      open /Applications/ytdl.app ;;
+    --zip)
+      ZIP="build/ytdl-$VERSION.zip"
+      rm -f "$ZIP"
+      ditto -c -k --keepParent "$APP" "$ZIP"   # ditto, not zip: preserves the bundle
+      echo "Packaged $ZIP" ;;
+  esac
+done
 exit 0

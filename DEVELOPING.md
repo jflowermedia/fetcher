@@ -8,7 +8,7 @@ Notes to self. Everything runs from the project folder:
 
 1. Edit the files in `Sources/ytdl/`.
 2. `swift run` — builds and launches straight from source. Fastest way to try something.
-3. When happy: `./build.sh --open` builds the real app at `build/ytdl.app` and opens it.
+3. When happy: `./build.sh --install` builds the real app, puts it in /Applications and opens it.
 4. Commit and push:
 
 ```
