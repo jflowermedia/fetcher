@@ -136,6 +136,10 @@ struct JobRow: View {
             case .finished:
                 iconButton("magnifyingglass.circle.fill", help: "Show in Finder") { revealInFinder() }
             case .failed, .cancelled:
+                // A failed QuickTime conversion still leaves the downloaded file.
+                if !job.files.isEmpty {
+                    iconButton("magnifyingglass.circle.fill", help: "Show in Finder") { revealInFinder() }
+                }
                 iconButton("arrow.clockwise.circle.fill", help: "Retry") { manager.retry(job) }
                 iconButton("doc.text.magnifyingglass", help: "Show Log") { showLog = true }
             }

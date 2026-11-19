@@ -27,6 +27,9 @@ enum YtDlp {
 
     static let defaultTemplate = "%(title).200B [%(id)s].%(ext)s"
     static let playlistTemplate = "%(playlist_title|Playlist).150B/%(playlist_index|0)03d - %(title).150B [%(id)s].%(ext)s"
+    /// " [1080p]" for anything with video. Without it a second download of the same video at
+    /// another quality would hit the first file, and yt-dlp would skip it as already done.
+    static let resolutionTag = "%(height& [{}p]|)s"
 
     // MARK: Info fetch
 
@@ -62,19 +65,25 @@ enum YtDlp {
             p.standardOutput = outPipe
             p.standardError = errPipe
             p.standardInput = FileHandle.nullDevice
+            // Drain both pipes on their own threads so a large JSON blob can't fill a pipe and
+            // stall the child, and learn about the exit from terminationHandler: waitUntilExit
+            // needs a running run loop, which isn't a given off the main thread.
+            let group = DispatchGroup()
+            var outData = Data(), errData = Data()
+            group.enter()
+            p.terminationHandler = { _ in group.leave() }
             do { try p.run() } catch { cont.resume(throwing: error); return }
+            group.enter()
             DispatchQueue.global().async {
-                // Drain both pipes concurrently so a large JSON blob can't deadlock the child.
-                var errData = Data()
-                let group = DispatchGroup()
-                group.enter()
-                DispatchQueue.global().async {
-                    errData = errPipe.fileHandleForReading.readDataToEndOfFile()
-                    group.leave()
-                }
-                let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-                group.wait()
-                p.waitUntilExit()
+                outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+                group.leave()
+            }
+            group.enter()
+            DispatchQueue.global().async {
+                errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+                group.leave()
+            }
+            group.notify(queue: .global()) {
                 cont.resume(returning: (p.terminationStatus, outData, errData))
             }
         }
@@ -108,9 +117,15 @@ enum YtDlp {
     }
 
     static func outputTemplate(_ o: Options) -> String {
-        if o.wholePlaylist { return playlistTemplate }
-        if let clip = o.clip { return "%(title).180B [%(id)s] [\(clip.tag)].%(ext)s" }
-        return defaultTemplate
+        let template: String
+        if o.wholePlaylist {
+            template = playlistTemplate
+        } else if let clip = o.clip {
+            template = "%(title).180B [%(id)s] [\(clip.tag)].%(ext)s"
+        } else {
+            template = defaultTemplate
+        }
+        return template.replacingOccurrences(of: ".%(ext)s", with: resolutionTag + ".%(ext)s")
     }
 
     /// Parses "80", "1:20", "1:02:03" or "1:20.5" into seconds.
@@ -119,7 +134,7 @@ enum YtDlp {
         guard (1...3).contains(parts.count) else { return nil }
         var total = 0.0
         for p in parts {
-            guard let v = Double(p), v >= 0 else { return nil }
+            guard let v = Double(p), v.isFinite, v >= 0 else { return nil }
             total = total * 60 + v
         }
         return total

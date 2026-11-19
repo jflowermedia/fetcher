@@ -7,9 +7,10 @@ Notes to self. Everything runs from the project folder:
 ## Everyday change
 
 1. Edit the files in `Sources/ytdl/`.
-2. `swift run` — builds and launches straight from source. Fastest way to try something.
-3. When happy: `./build.sh --install` builds the real app, puts it in /Applications and opens it.
-4. Commit and push:
+2. `swift run ytdl --self-check` — downloads a 19-second video in every mode through the real download queue, checks the files with ffprobe and AVFoundation, and cancels one mid-download. About two minutes. Add `--offline` for just the parsing checks.
+3. `swift run` — builds and launches straight from source. Fastest way to try something.
+4. When happy: `./build.sh --install` builds the real app, puts it in /Applications and opens it.
+5. Commit and push:
 
 ```
 git add .

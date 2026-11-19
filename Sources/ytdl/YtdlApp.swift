@@ -16,6 +16,8 @@ enum AppInfo {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    var manager: DownloadManager?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Needed when launched as a bare executable (swift run) rather than an .app bundle.
         NSApp.setActivationPolicy(.regular)
@@ -25,7 +27,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// Closing the window mid-download leaves the app running so downloads finish;
+    /// the Dock icon brings the window back.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        MainActor.assumeIsolated { !(manager?.hasActiveJobs ?? false) }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        MainActor.assumeIsolated {
+            guard let manager, manager.hasActiveJobs else { return .terminateNow }
+            let count = manager.jobs.filter { !$0.state.isDone }.count
+            let alert = NSAlert()
+            alert.messageText = count == 1 ? "A download is still running." : "\(count) downloads are still running."
+            alert.informativeText = "Quitting stops them. Partly downloaded files are kept, and Retry picks up where they left off."
+            alert.addButton(withTitle: "Quit")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
+            manager.shutDown()
+            return .terminateNow
+        }
+    }
 }
 
 @main
@@ -35,15 +56,17 @@ struct YtdlApp: App {
     @State private var updater = Updater()
     @AppStorage("watchClipboard") private var watchClipboard = true
 
+    init() {
+        if CommandLine.arguments.contains("--self-check") { SelfCheck.runAndExit() }
+    }
+
     var body: some Scene {
         Window("ytdl", id: "main") {
             ContentView()
                 .environment(manager)
                 .environment(updater)
                 .frame(minWidth: 780, minHeight: 640)
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-                    manager.cancelAll()
-                }
+                .onAppear { appDelegate.manager = manager }
         }
         .defaultSize(width: 940, height: 820)
         .commands {

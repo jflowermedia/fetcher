@@ -374,8 +374,15 @@ struct ContentView: View {
         let standard = [2160, 1440, 1080, 720, 480, 360]
         guard let info, !info.isPlaylist, batchURLs.isEmpty else { return standard }
         let avail = info.availableHeights
-        return standard.filter { h in avail.contains { $0 >= h } }
+        var choices = standard.filter { h in avail.contains { $0 >= h } }
             .union(avail.filter { $0 >= 144 && $0 < 360 }.prefix(1))
+        // Keep a remembered choice listed even when this video doesn't reach it, or the
+        // picker shows blank. yt-dlp takes the best below it either way.
+        if videoHeight != 0 && !choices.contains(videoHeight) {
+            choices.append(videoHeight)
+            choices.sort(by: >)
+        }
+        return choices
     }
 
     private func heightLabel(_ h: Int) -> String {
@@ -458,6 +465,16 @@ struct ContentView: View {
             .filter { seen.insert($0).inserted }
     }
 
+    /// True when everything in the text besides its links is whitespace.
+    static func isOnlyLinks(_ text: String) -> Bool {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return false }
+        let rest = NSMutableString(string: text)
+        for match in detector.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            rest.replaceCharacters(in: match.range, with: " ")
+        }
+        return (rest as String).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private func addLinks(_ links: [String]) {
         let combined = Self.extractLinks(urlText + " " + links.joined(separator: " "))
         urlText = combined.joined(separator: " ")
@@ -469,8 +486,10 @@ struct ContentView: View {
         guard watchClipboard, pb.changeCount != lastPasteboardChange else { return }
         lastPasteboardChange = pb.changeCount
         guard let text = pb.string(forType: .string) else { return }
+        // Only when the clipboard is just links: copying a paragraph that mentions one
+        // shouldn't replace what's in the field.
         let links = Self.extractLinks(text)
-        guard !links.isEmpty, links != Self.extractLinks(urlText) else { return }
+        guard !links.isEmpty, Self.isOnlyLinks(text), links != Self.extractLinks(urlText) else { return }
         urlText = links.joined(separator: " ")
     }
 
@@ -492,7 +511,7 @@ struct ContentView: View {
         guard t != fetchedURL else { return }
         fetchTask?.cancel()
         guard t.hasPrefix("http"), URL(string: t)?.host != nil else {
-            if t.isEmpty { info = nil; fetchError = nil; fetchedURL = nil }
+            if t.isEmpty { info = nil; fetchError = nil; fetchedURL = nil; isFetching = false }
             return
         }
         fetchTask = Task {

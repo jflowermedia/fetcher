@@ -37,6 +37,7 @@ final class DownloadJob: Identifiable {
 
     fileprivate var process: Process?
     fileprivate var cancelRequested = false
+    fileprivate var tempFile: URL?
 
     init(request: DownloadRequest) {
         self.request = request
@@ -60,7 +61,7 @@ final class DownloadJob: Identifiable {
         case .processing: return "Processing…"
         case .converting:
             let pct = progress.map { String(format: " %.0f%%", $0 * 100) } ?? ""
-            return "Converting to HEVC for QuickTime…" + pct
+            return "Converting for QuickTime…" + pct
         case .finished: return files.count > 1 ? "Done · \(files.count) files" : "Done"
         case .failed(let msg): return msg
         case .cancelled: return "Cancelled"
@@ -82,9 +83,17 @@ final class DownloadManager {
 
     var hasFinished: Bool { jobs.contains { $0.state.isDone } }
 
-    func enqueue(_ request: DownloadRequest) {
+    /// Ignores a request identical to one already queued or running: both would write the
+    /// same file, and the second crashes when the first moves it. False when ignored.
+    @discardableResult
+    func enqueue(_ request: DownloadRequest) -> Bool {
+        let duplicate = jobs.contains {
+            !$0.state.isDone && $0.request.url == request.url && $0.request.arguments == request.arguments
+        }
+        guard !duplicate else { return false }
         jobs.insert(DownloadJob(request: request), at: 0)
         pump()
+        return true
     }
 
     var hasActiveJobs: Bool { jobs.contains { !$0.state.isDone } }
@@ -98,6 +107,8 @@ final class DownloadManager {
     func remove(_ job: DownloadJob) {
         if !job.state.isDone { cancel(job) }
         jobs.removeAll { $0.id == job.id }
+        // A removed job never reports back, so free its slot now.
+        pump()
     }
 
     func clearFinished() {
@@ -118,6 +129,15 @@ final class DownloadManager {
 
     func cancelAll() {
         for job in jobs { cancel(job) }
+    }
+
+    /// For quitting: stop everything and delete half-written HEVC copies, since the
+    /// conversion's own cleanup won't get a chance to run.
+    func shutDown() {
+        cancelAll()
+        for job in jobs {
+            if let temp = job.tempFile { try? FileManager.default.removeItem(at: temp) }
+        }
     }
 
     private func pump() {
@@ -146,32 +166,32 @@ final class DownloadManager {
         p.standardOutput = pipe
         p.standardError = pipe
 
+        // finish() waits for both the exit and the end of output, so the last [[FILE]] line
+        // can't be lost to a race between them.
         let buffer = LineBuffer()
+        let done = DispatchGroup()
+        done.enter()
+        done.enter()
         pipe.fileHandleForReading.readabilityHandler = { [weak job] handle in
             let data = handle.availableData
             if data.isEmpty { handle.readabilityHandler = nil }
             let lines = data.isEmpty ? buffer.flush() : buffer.append(data)
-            guard !lines.isEmpty else { return }
-            // DispatchQueue.main keeps lines in order (unstructured Tasks don't guarantee that).
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated {
-                    guard let job else { return }
-                    for line in lines { Self.handle(line, job: job) }
+            if !lines.isEmpty {
+                // DispatchQueue.main keeps lines in order (unstructured Tasks don't guarantee that).
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        guard let job else { return }
+                        for line in lines { Self.handle(line, job: job) }
+                    }
                 }
             }
+            if data.isEmpty { done.leave() }
         }
-
-        p.terminationHandler = { [weak self, weak job] proc in
-            let status = proc.terminationStatus
-            // Let the pipe drain before reading the final state.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                pipe.fileHandleForReading.readabilityHandler = nil
-                let rest = buffer.flush()
-                MainActor.assumeIsolated {
-                    guard let job else { return }
-                    for line in rest { Self.handle(line, job: job) }
-                    self?.finish(job, status: status)
-                }
+        p.terminationHandler = { _ in done.leave() }
+        done.notify(queue: .main) { [weak self, weak job] in
+            MainActor.assumeIsolated {
+                guard let job else { return }
+                self?.finish(job, status: p.terminationStatus)
             }
         }
 
@@ -219,8 +239,9 @@ final class DownloadManager {
                   QuickTimeConverter.needsConversion(file, probe) else { continue }
             job.state = .converting
             job.progress = 0
-            job.log.append("Converting \(probe.videoCodec) to HEVC: \(file.lastPathComponent)")
+            job.log.append("Converting \(QuickTimeConverter.summary(probe)): \(file.lastPathComponent)")
             let temp = QuickTimeConverter.tempURL(for: file)
+            job.tempFile = temp
             let ok = await runFFmpeg(job, QuickTimeConverter.arguments(input: file, output: temp, probe: probe),
                                      duration: probe.duration)
             if ok, !job.cancelRequested {
@@ -236,12 +257,13 @@ final class DownloadManager {
                 try? FileManager.default.removeItem(at: temp)
                 if !job.cancelRequested {
                     let err = job.log.last.map { ": \($0)" } ?? ""
-                    job.state = .failed("Downloaded, but the HEVC conversion failed\(err). The original file was kept.")
+                    job.state = .failed("Downloaded, but converting it for QuickTime failed\(err). The original file was kept.")
                 }
                 break
             }
         }
         job.process = nil
+        job.tempFile = nil
         if job.cancelRequested {
             job.state = .cancelled
         } else if job.state == .converting || job.state == .processing || job.state == .downloading {
