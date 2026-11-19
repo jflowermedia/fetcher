@@ -4,7 +4,7 @@ import UserNotifications
 
 enum AppInfo {
     static let name = "Fetcher"
-    static let version = "0.1.1"
+    static let version = "0.1.2"
     static let stage = "alpha"
     static let versionLabel = "Version \(version) · \(stage)"
 
