@@ -1,7 +1,7 @@
 import AVFoundation
 import Foundation
 
-/// `swift run ytdl --self-check` runs these and exits without opening a window.
+/// `swift run Fetcher --self-check` runs these and exits without opening a window.
 /// Add `--offline` to skip the ones that download from YouTube.
 @MainActor
 enum SelfCheck {
@@ -49,7 +49,7 @@ enum SelfCheck {
             return
         }
 
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ytdl-self-check-\(UUID().uuidString.prefix(8))")
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("Fetcher-self-check-\(UUID().uuidString.prefix(8))")
         defer { try? FileManager.default.removeItem(at: dir) }
         let opts = YtDlp.Options(outputDir: dir, wholePlaylist: false, embedMetadata: true,
                                  embedThumbnail: true, embedSubs: false, embedChapters: true)

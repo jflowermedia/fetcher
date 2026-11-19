@@ -225,7 +225,7 @@ struct ContentView: View {
                 Image(systemName: "arrow.down.circle").font(.system(size: 40)).foregroundStyle(.tertiary)
                 Text("Paste or drop a link to get started").foregroundStyle(.secondary)
                 if watchClipboard {
-                    Text("Links you copy are filled in automatically when you switch to ytdl.")
+                    Text("Links you copy are filled in automatically when you switch to Fetcher.")
                         .font(.caption).foregroundStyle(.tertiary)
                 }
                 VStack(spacing: 4) {
@@ -259,7 +259,7 @@ struct ContentView: View {
                 Toggle("Convert to HEVC when needed, so it plays in QuickTime and QuickLook", isOn: $convertForQuickTime)
                 if (videoHeight == 0 || videoHeight > 1080) && (maxHeight > 1080 || !batchURLs.isEmpty) {
                     Text(convertForQuickTime
-                         ? "Above 1080p YouTube only offers VP9 or AV1. ytdl re-encodes those to HEVC after downloading: hardware-accelerated, but it takes a moment and the file is a little larger."
+                         ? "Above 1080p YouTube only offers VP9 or AV1. Fetcher re-encodes those to HEVC after downloading: hardware-accelerated, but it takes a moment and the file is a little larger."
                          : "Above 1080p YouTube only offers VP9 or AV1, which QuickTime and QuickLook can't play. Use IINA or VLC, or turn on HEVC conversion.")
                         .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

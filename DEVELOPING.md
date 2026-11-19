@@ -1,4 +1,4 @@
-# Developing ytdl
+# Developing Fetcher
 
 Notes to self. Everything runs from the project folder:
 
@@ -6,8 +6,8 @@ Notes to self. Everything runs from the project folder:
 
 ## Everyday change
 
-1. Edit the files in `Sources/ytdl/`.
-2. `swift run ytdl --self-check` — downloads a 19-second video in every mode through the real download queue, checks the files with ffprobe and AVFoundation, and cancels one mid-download. About two minutes. Add `--offline` for just the parsing checks.
+1. Edit the files in `Sources/Fetcher/`.
+2. `swift run Fetcher --self-check` — downloads a 19-second video in every mode through the real download queue, checks the files with ffprobe and AVFoundation, and cancels one mid-download. About two minutes. Add `--offline` for just the parsing checks.
 3. `swift run` — builds and launches straight from source. Fastest way to try something.
 4. When happy: `./build.sh --install` builds the real app, puts it in /Applications and opens it.
 5. Commit and push:
@@ -22,13 +22,13 @@ Pushing does **not** give anyone a new app. Downloads come from Releases.
 
 ## Cutting a release
 
-1. Bump the version: `AppInfo.version` near the top of `Sources/ytdl/YtdlApp.swift`. That's the only place — the build script reads it and stamps the app bundle to match. Drop `stage` to `"beta"` or `""` when it earns it.
+1. Bump the version: `AppInfo.version` near the top of `Sources/Fetcher/FetcherApp.swift`. That's the only place — the build script reads it and stamps the app bundle to match. Drop `stage` to `"beta"` or `""` when it earns it.
 2. Commit and push that change.
-3. `./build.sh --zip` — builds and packages `build/ytdl-<version>.zip` with `ditto` (Finder's Compress can break an app bundle).
+3. `./build.sh --zip` — builds and packages `build/Fetcher-<version>.zip` with `ditto` (Finder's Compress can break an app bundle).
 4. Publish it:
 
 ```
-gh release create v0.2.0-alpha build/ytdl-0.2.0.zip --prerelease --title "ytdl 0.2" --notes "What changed"
+gh release create v0.2.0-alpha build/Fetcher-0.2.0.zip --prerelease --title "Fetcher 0.2" --notes "What changed"
 ```
 
 ## The app icon

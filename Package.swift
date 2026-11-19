@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "ytdl",
+    name: "Fetcher",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "ytdl", path: "Sources/ytdl")
+        .executableTarget(name: "Fetcher", path: "Sources/Fetcher")
     ]
 )

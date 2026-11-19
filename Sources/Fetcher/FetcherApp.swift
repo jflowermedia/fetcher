@@ -3,16 +3,16 @@ import SwiftUI
 import UserNotifications
 
 enum AppInfo {
-    static let name = "ytdl"
-    static let version = "0.1.0"
+    static let name = "Fetcher"
+    static let version = "0.1.1"
     static let stage = "alpha"
     static let versionLabel = "Version \(version) · \(stage)"
 
     static let website = URL(string: "https://jflowermedia.com/")!
     static let instagram = URL(string: "https://www.instagram.com/jflowermedia/")!
 
-    static let repo = URL(string: "https://github.com/jflowermedia/ytdl")!
-    static let issues = URL(string: "https://github.com/jflowermedia/ytdl/issues")!
+    static let repo = URL(string: "https://github.com/jflowermedia/fetcher")!
+    static let issues = URL(string: "https://github.com/jflowermedia/fetcher/issues")!
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -50,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct YtdlApp: App {
+struct FetcherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var manager = DownloadManager()
     @State private var updater = Updater()
@@ -61,7 +61,7 @@ struct YtdlApp: App {
     }
 
     var body: some Scene {
-        Window("ytdl", id: "main") {
+        Window("Fetcher", id: "main") {
             ContentView()
                 .environment(manager)
                 .environment(updater)
@@ -71,7 +71,7 @@ struct YtdlApp: App {
         .defaultSize(width: 940, height: 820)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About ytdl") { Self.showAbout() }
+                Button("About Fetcher") { Self.showAbout() }
             }
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .appInfo) {
@@ -85,7 +85,7 @@ struct YtdlApp: App {
                 Toggle("Fill In Copied Links Automatically", isOn: $watchClipboard)
             }
             CommandGroup(replacing: .help) {
-                Button("ytdl on GitHub") { NSWorkspace.shared.open(AppInfo.repo) }
+                Button("Fetcher on GitHub") { NSWorkspace.shared.open(AppInfo.repo) }
                 Button("Report a Problem") { NSWorkspace.shared.open(AppInfo.issues) }
                 Divider()
                 Button("JFlowerMedia Website") { NSWorkspace.shared.open(AppInfo.website) }
