@@ -2,7 +2,8 @@ import AVFoundation
 import Foundation
 
 /// `swift run Fetcher --self-check` runs these and exits without opening a window.
-/// Add `--offline` to skip the ones that download from YouTube.
+/// Add `--offline` to skip the ones that download from YouTube, or `--install` to check only
+/// that the tools download and unpack (about 150 MB, into a temporary folder).
 @MainActor
 enum SelfCheck {
     static let sample = "https://www.youtube.com/watch?v=jNQXAC9IVRw"  // "Me at the zoo", 19 s
@@ -43,6 +44,13 @@ enum SelfCheck {
         check(ContentView.isOnlyLinks("https://youtu.be/a\n https://youtu.be/b "), "clipboard: bare links count")
         check(!ContentView.isOnlyLinks("watch this https://youtu.be/a"), "clipboard: a sentence with a link doesn't")
 
+        let sum = String(repeating: "ab", count: 32)
+        let sums = "\(sum)  other.zip\n\(sum.uppercased())  tool.zip\nshort  bad.zip\n"
+        check(ToolPackage.checksum(of: "tool.zip", in: sums) == sum, "published checksum is found by file name")
+        check(ToolPackage.checksum(of: "bad.zip", in: sums) == nil && ToolPackage.checksum(of: "ool.zip", in: sums) == nil,
+              "junk checksums are refused")
+
+        if CommandLine.arguments.contains("--install") { return await checkInstall() }
         guard !CommandLine.arguments.contains("--offline") else { return }
         guard Dependencies.findMissing().isEmpty else {
             check(false, "yt-dlp, ffmpeg and deno installed", Dependencies.findMissing().joined(separator: ", "))
@@ -144,6 +152,34 @@ enum SelfCheck {
         try? await Task.sleep(for: .seconds(1))
         let leftovers = await processesMentioning(dir.path)
         check(leftovers.isEmpty, "no yt-dlp or ffmpeg left running", leftovers)
+    }
+
+    /// Downloads and unpacks every tool without running any of them.
+    private static func checkInstall() async {
+        let root = FileManager.default.temporaryDirectory.appending(path: "Fetcher-tools-\(UUID().uuidString.prefix(8))")
+        defer { try? FileManager.default.removeItem(at: root) }
+        print("\nInstalling the tools")
+        for package in ToolPackage.all {
+            for pass in ["installs", "installs over itself"] {
+                do {
+                    try await package.install(in: root)
+                    check(package.binaries.keys.allSatisfy { ToolPackage.ownCopy(of: $0, in: root) != nil }, "\(package.name) \(pass)")
+                } catch {
+                    check(false, "\(package.name) \(pass)", error.localizedDescription)
+                }
+            }
+        }
+        var tampered = ToolPackage.ffmpeg
+        tampered.archives[0].checksum = .pinned(String(repeating: "0", count: 64))
+        do {
+            try await tampered.install(in: root)
+            check(false, "a wrong checksum is refused")
+        } catch {
+            check(error.localizedDescription.contains("checksum"), "a wrong checksum is refused", error.localizedDescription)
+        }
+        check(ToolPackage.ownCopy(of: "ffmpeg", in: root) != nil, "and leaves the working copy alone")
+        let left = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
+        check(left.sorted() == ["deno", "ffmpeg", "yt-dlp"], "nothing left half-installed", left.joined(separator: ", "))
     }
 
     // MARK: Helpers

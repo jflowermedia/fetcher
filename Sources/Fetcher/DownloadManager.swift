@@ -152,7 +152,7 @@ final class DownloadManager {
 
     private func start(_ job: DownloadJob) {
         guard let exe = YtDlp.ytdlpPath else {
-            job.state = .failed("yt-dlp not found — brew install yt-dlp ffmpeg deno")
+            job.state = .failed("yt-dlp not found — click Install at the top of the window")
             return
         }
         try? FileManager.default.createDirectory(at: job.request.outputDir, withIntermediateDirectories: true)

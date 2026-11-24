@@ -6,11 +6,15 @@ enum YtDlp {
         "/opt/homebrew/bin",
         "/usr/local/bin",
         NSHomeDirectory() + "/.local/bin",
+        // Fetcher's own copies, for yt-dlp to find deno and ffmpeg in.
+        ToolPackage.ffmpeg.directory().path,
+        ToolPackage.deno.directory().path,
         "/usr/bin",
     ]
 
     static func find(_ name: String) -> String? {
         searchDirs.map { "\($0)/\(name)" }.first { FileManager.default.isExecutableFile(atPath: $0) }
+            ?? ToolPackage.ownCopy(of: name)
     }
 
     static var ytdlpPath: String? { find("yt-dlp") }
@@ -39,7 +43,7 @@ enum YtDlp {
     }
 
     static func fetchInfo(url: String) async throws -> VideoInfo {
-        guard let exe = ytdlpPath else { throw FetchError(message: "yt-dlp not found. Install it with: brew install yt-dlp ffmpeg deno") }
+        guard let exe = ytdlpPath else { throw FetchError(message: "yt-dlp not found. Click Install at the top of the window.") }
         let args = ["-J", "--flat-playlist", "--no-playlist", "--no-warnings", "--no-update", "--", url]
         let (status, out, err) = try await run(exe, args)
         guard status == 0 else {

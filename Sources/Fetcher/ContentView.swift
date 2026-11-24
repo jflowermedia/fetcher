@@ -90,8 +90,8 @@ struct ContentView: View {
             if !dependencies.isInstalling { dependencies.refresh() }
         }
         .task {
-            // First launch: install anything missing straight away when Homebrew can do it unattended.
-            if dependencies.hasHomebrew { await dependencies.install() }
+            // First launch: download anything missing straight away.
+            await dependencies.install()
             await updater.checkVersion()
         }
         .onChange(of: dependencies.missing.contains("yt-dlp")) { _, _ in
@@ -107,17 +107,13 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 if dependencies.isInstalling {
                     ProgressView().controlSize(.small)
-                    Text("Installing \(dependencies.missing.joined(separator: ", ")) with Homebrew… this can take a few minutes.")
+                    Text("Downloading \(dependencies.installing ?? "tools")… Fetcher only does this once, and it can take a few minutes.")
                 } else {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(dependencies.error ?? "Fetcher needs \(dependencies.missing.joined(separator: ", ")) to download.")
                             .fontWeight(.medium)
                             .textSelection(.enabled)
-                        if !dependencies.hasHomebrew {
-                            Text("Install opens Terminal to set up Homebrew first. It asks for your Mac password.")
-                                .font(.callout).foregroundStyle(.secondary)
-                        }
                     }
                     Spacer()
                     Button(dependencies.error == nil ? "Install" : "Try Again") {

@@ -43,7 +43,9 @@ final class Updater {
     }
 
     func update() async {
-        guard let command = updateCommand, !isUpdating else { return }
+        guard !isUpdating else { return }
+        if YtDlp.ytdlpPath == ToolPackage.ownCopy(of: "yt-dlp") { return await updateOwnCopy() }
+        guard let command = updateCommand else { return }
         let (exe, args) = command
         let before = version
         isUpdating = true
@@ -61,6 +63,22 @@ final class Updater {
             } else {
                 message = "yt-dlp \(version ?? "") is already the latest version."
             }
+        } catch {
+            message = "Update failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// yt-dlp's own updater can't replace the zipped build, so download it again.
+    private func updateOwnCopy() async {
+        let before = version
+        isUpdating = true
+        message = nil
+        defer { isUpdating = false }
+        do {
+            try await ToolPackage.ytdlp.install()
+            await checkVersion()
+            message = version == before ? "yt-dlp \(version ?? "") is already the latest version."
+                                        : "Updated yt-dlp to \(version ?? "?")."
         } catch {
             message = "Update failed: \(error.localizedDescription)"
         }

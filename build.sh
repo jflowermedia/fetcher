@@ -70,13 +70,6 @@ for arg in "$@"; do
       ditto "$APP" /Applications/Fetcher.app
       touch /Applications/Fetcher.app          # nudges Finder to pick up a changed icon
       echo "Installed to /Applications/Fetcher.app"
-      # The app installs these itself on launch too; doing it here shows brew's progress.
-      missing=()
-      for tool in yt-dlp ffmpeg deno; do command -v "$tool" >/dev/null || missing+=("$tool"); done
-      if [ ${#missing[@]} -gt 0 ]; then
-        if command -v brew >/dev/null; then brew install "${missing[@]}"
-        else echo "Homebrew not found: Fetcher will offer to install it and ${missing[*]} on launch."; fi
-      fi
       open /Applications/Fetcher.app ;;
     --zip)
       ZIP="build/Fetcher-$VERSION.zip"
