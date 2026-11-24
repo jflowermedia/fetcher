@@ -1,29 +1,44 @@
+<div align="center">
+
+<img src="docs/icon.png" width="120" alt="">
+
 # Fetcher
 
-**Paste a link, get the file.** A native Mac app for [yt-dlp](https://github.com/yt-dlp/yt-dlp): MP4 that plays in QuickTime, audio as MP3 or lossless, or any format a site offers, without remembering a single flag.
+**Paste a link, get the file.**
 
-Built by [JFlowerMedia](https://jflowermedia.com/) · [Download](../../releases) · macOS 14 or later
+A native Mac app for [yt-dlp](https://github.com/yt-dlp/yt-dlp). Video that plays in QuickTime, audio,<br>
+or any format a site offers, without remembering a single flag.
 
-> **Alpha, version 0.1.1.** Tested on one Mac with YouTube. Bug reports welcome in [Issues](../../issues).
+[![Latest release](https://img.shields.io/github/v/release/jflowermedia/fetcher?include_prereleases&label=release&color=a6e3a1)](../../releases)
+![macOS 14 or later](https://img.shields.io/badge/macOS-14%2B-1e1e2e)
+![Free, MIT licence](https://img.shields.io/badge/licence-MIT-1e1e2e)
 
-![The Fetcher window: a hockey recap's link pasted at the top with its thumbnail, title and length, the Video (MP4) tab set to 4K with H.264 and HEVC conversion ticked, and below it the downloads list with three finished 4K recaps and one converting for QuickTime at 74%](docs/fetcher.png)
+**[Download](../../releases)** &nbsp;·&nbsp; **[Guide](#guide)** &nbsp;·&nbsp; **[Report a problem](../../issues)**
 
-## Features
+</div>
 
-- **Video (MP4)** — pick a quality from Best down to 360p. H.264 and AAC are preferred, so files play everywhere. Above 1080p, where YouTube only offers VP9 or AV1, Fetcher re-encodes to HEVC with the Mac's hardware encoder so QuickTime and QuickLook can play it.
-- **Audio** — MP3 at the bitrate you choose, M4A, Opus, FLAC, WAV or the original stream, with cover art and metadata.
-- **All Formats** — a sortable table of every stream on offer. Pick a video-only stream and the best audio is merged in. Keep the original, remux to MP4 or MKV, or re-encode to MP4.
-- **Clips** — download just 1:20 to 2:45 instead of the whole video. **Precise cuts** re-encodes at the cut points so the clip starts exactly where you asked.
-- **Many links at once** — paste or drop several links and they all queue with the same settings.
-- **Copied links fill themselves in** when you switch to Fetcher. Turn it off under **Edit → Fill In Copied Links Automatically**.
-- **Playlists**, embedded subtitles and chapters, up to three downloads at a time, cancel and retry, and a log for every download.
-- **Keeps yt-dlp current** — sites change often and old versions of yt-dlp stop working. Fetcher warns when yt-dlp is over 60 days old and updates it in one click.
+<p align="center"><img src="docs/fetcher.png" width="100%" alt="The Fetcher window: a hockey recap's link pasted at the top with its thumbnail, title and length, the Video (MP4) tab set to 4K with H.264 and HEVC conversion ticked, and below it the downloads list with three finished 4K recaps and one converting for QuickTime at 74%"></p>
+
+| 1. Paste | 2. Choose | 3. Download | 4. Play |
+|:--|:--|:--|:--|
+| Paste or drop one link, or several. | Video, audio, or any stream on offer. | Up to three run at a time. | 4K is converted so QuickTime can open it. |
+
+> [!NOTE]
+> Alpha, version 0.1.2. Tested on one Mac with YouTube.
+
+## What it does
+
+- **Video as MP4**, from Best down to 360p. H.264 and AAC are preferred, so files play everywhere.
+- **4K that plays.** Above 1080p YouTube only offers VP9 or AV1, so Fetcher re-encodes to HEVC with the Mac's hardware encoder.
+- **Audio** as MP3 at the bitrate you choose, M4A, Opus, FLAC, WAV or the original stream, with cover art and metadata.
+- **Clips.** Download 1:20 to 2:45 instead of the whole video.
+- **Many links at once**, and whole playlists, all with the same settings.
+- **Subtitles and chapters**, embedded in the file.
+- **yt-dlp kept current.** Old versions stop working, so Fetcher warns you after 60 days and updates it in one click.
 
 ## Install
 
-Download the latest `Fetcher-<version>.zip` from [Releases](../../releases), unzip, and drag **Fetcher.app** to Applications.
-
-Fetcher drives yt-dlp, ffmpeg and deno (deno is what yt-dlp uses to get past YouTube's JavaScript checks). On first launch it installs whichever are missing with [Homebrew](https://brew.sh). If you don't have Homebrew, click **Install** in the banner: Terminal opens, installs Homebrew (it asks for your Mac password), then the three tools.
+Download the latest **Fetcher** zip from [Releases](../../releases), unzip it, and drag **Fetcher.app** to Applications.
 
 Fetcher isn't notarized by Apple, so macOS blocks the first launch:
 
@@ -31,48 +46,65 @@ Fetcher isn't notarized by Apple, so macOS blocks the first launch:
 2. Go to **System Settings → Privacy & Security** and click **Open Anyway** beside Fetcher.
 3. Open Fetcher again and click **Open**.
 
-Or run `xattr -dr com.apple.quarantine /Applications/Fetcher.app` once.
+On first launch Fetcher downloads whichever of yt-dlp, ffmpeg and deno you don't already have, about 150 MB, and checks each one against its checksum. They go in your own Library folder, so there's no Homebrew, no Terminal and no password. (yt-dlp needs deno to get past YouTube's JavaScript checks.)
 
-**Build from source** (needs Xcode's command line tools):
+Fetcher needs a Mac with Apple Silicon.
+
+<details>
+<summary>Or use Terminal, or build it yourself</summary>
+
+Allow it in one line:
+
+```
+xattr -dr com.apple.quarantine /Applications/Fetcher.app
+```
+
+Build from source (needs Xcode's command line tools).
 
 ```
 git clone https://github.com/jflowermedia/fetcher.git
 cd fetcher
-./build.sh --open
+./build.sh --install
 ```
 
-See [DEVELOPING.md](DEVELOPING.md) for more.
+</details>
 
-## Shortcuts
+## Guide
 
-| Keys | Does |
-|---|---|
-| ⇧⌘V | Paste a link from the clipboard |
-| Return | Fetch the link's info |
-| ⌘Return | Download |
+**Get a video.** Copy a link and switch to Fetcher, which fills it in for you. Pick a quality and click **Download**. To stop links filling themselves in, turn off **Edit → Fill In Copied Links Automatically**.
 
-## Troubleshooting
+| Keys | What it does |
+|:--|:--|
+| <kbd>⇧⌘V</kbd> | Pastes a link from the clipboard. |
+| <kbd>Return</kbd> | Fetches the link's info. |
+| <kbd>⌘Return</kbd> | Downloads it. |
 
-- **Downloads suddenly failing?** Update yt-dlp: **Fetcher → Update yt-dlp**. Site changes break old versions.
-- **A download failed?** Click the log button on its row. It shows the exact yt-dlp command, so you can run it in Terminal yourself.
-- **Fetcher can't find yt-dlp, ffmpeg or deno?** It looks in `/opt/homebrew/bin`, `/usr/local/bin` and `~/.local/bin`.
-- **4K MP4 won't play in QuickTime or QuickLook?** YouTube only offers H.264 up to 1080p; higher resolutions are VP9 or AV1, which QuickTime can't decode. Leave **Convert to HEVC when needed** on (it is by default) and Fetcher re-encodes them after downloading. A 4K minute takes roughly 20 seconds on an M1 Max.
+**Choose the exact stream.** **All Formats** is a sortable table of everything on offer. Pick a video-only stream and the best audio is merged in. Keep the original, remux it to MP4 or MKV, or re-encode it to MP4.
 
-## Known gaps
+**Cut a clip.** Tick **Clip** and type the start and end. **Precise cuts** re-encodes at the cut points, so the clip starts exactly where you asked.
 
-- Settings for the filename template, parallel downloads and speed limits aren't exposed yet.
-- Downloads aren't remembered across relaunches.
+**If something goes wrong.**
+
+| Problem | Try this |
+|:--|:--|
+| Downloads suddenly fail | Choose **Fetcher → Update yt-dlp**. Site changes break old versions. |
+| One download failed | Click the log button on its row. It shows the exact yt-dlp command, so you can run it in Terminal yourself. |
+| yt-dlp, ffmpeg or deno isn't found | Click **Install** at the top of the window. Fetcher looks in `/opt/homebrew/bin`, `/usr/local/bin` and `~/.local/bin`, then uses its own copies in `~/Library/Application Support/Fetcher`. |
+| 4K won't play in QuickTime | Leave **Convert to HEVC when needed** on, as it is by default. A 4K minute takes roughly 20 seconds on an M1 Max. |
+
+**Not there yet.** You can't change the filename template, the number of parallel downloads or the speed limit, and the downloads list is cleared when you quit.
 
 ## Credits
 
 Built by **JFlowerMedia** · [jflowermedia.com](https://jflowermedia.com/) · [@jflowermedia](https://www.instagram.com/jflowermedia/)
 
-All the downloading is done by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). Fetcher is a front end for them.
+All the downloading is done by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and [FFmpeg](https://ffmpeg.org/). Fetcher is a front end for them. Its own copy of FFmpeg is [Martin Riedl's build](https://ffmpeg.martin-riedl.de/).
 
-## License
+The icon uses the [Catppuccin](https://github.com/catppuccin/catppuccin) palette, MIT. Fetcher is [MIT licensed](LICENSE).
 
-MIT, see [LICENSE](LICENSE).
-
-## Disclaimer
+<details>
+<summary>Disclaimer</summary>
 
 Fetcher is alpha software, provided as is, without warranty. Only download content you have the right to download, and respect each site's terms of service and the creator's copyright. No liability is accepted for how it's used.
+
+</details>
